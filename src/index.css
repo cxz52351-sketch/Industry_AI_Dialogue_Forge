@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Industrial AI Dialogue Interface Design System
+All colors MUST be HSL. Enterprise-grade color palette with industrial aesthetics.
+*/
+
+@layer base {
+  :root {
+    /* Industrial Color Palette */
+    --background: 220 15% 97%;
+    --foreground: 210 40% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 40% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 40% 15%;
+
+    /* Industrial Blue Primary */
+    --primary: 210 35% 25%;  /* #2C3E50 equivalent */
+    --primary-foreground: 0 0% 98%;
+    --primary-light: 210 35% 40%;
+    --primary-dark: 210 35% 15%;
+
+    /* Industrial Gray Secondary */
+    --secondary: 210 15% 92%;  /* #ECF0F1 equivalent */
+    --secondary-foreground: 210 40% 15%;
+
+    --muted: 210 15% 94%;
+    --muted-foreground: 210 20% 45%;
+
+    --accent: 210 50% 55%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 210 20% 85%;
+    --input: 210 20% 95%;
+    --ring: 210 35% 25%;
+
+    /* AI Chat Specific Colors */
+    --ai-message: 210 15% 96%;
+    --user-message: 210 35% 25%;
+    --user-message-foreground: 0 0% 98%;
+    --code-background: 210 20% 20%;
+    --success: 145 85% 35%;
+    --warning: 45 85% 55%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--secondary)));
+    
+    /* Shadows */
+    --shadow-soft: 0 2px 8px -2px hsl(var(--primary) / 0.1);
+    --shadow-medium: 0 4px 16px -4px hsl(var(--primary) / 0.15);
+    --shadow-strong: 0 8px 24px -8px hsl(var(--primary) / 0.2);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s ease-out;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark Industrial Theme */
+    --background: 210 20% 8%;
+    --foreground: 210 15% 92%;
+
+    --card: 210 20% 10%;
+    --card-foreground: 210 15% 92%;
+
+    --popover: 210 20% 10%;
+    --popover-foreground: 210 15% 92%;
+
+    --primary: 210 50% 65%;
+    --primary-foreground: 210 20% 8%;
+    --primary-light: 210 50% 75%;
+    --primary-dark: 210 50% 55%;
+
+    --secondary: 210 20% 15%;
+    --secondary-foreground: 210 15% 85%;
+
+    --muted: 210 20% 12%;
+    --muted-foreground: 210 15% 60%;
+
+    --accent: 210 50% 60%;
+    --accent-foreground: 210 20% 8%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 210 20% 20%;
+    --input: 210 20% 15%;
+    --ring: 210 50% 65%;
+
+    /* Dark AI Chat Colors */
+    --ai-message: 210 20% 12%;
+    --user-message: 210 50% 25%;
+    --user-message-foreground: 210 15% 92%;
+    --code-background: 210 20% 5%;
+    --success: 145 85% 45%;
+    --warning: 45 85% 65%;
+
+    --sidebar-background: 210 20% 6%;
+    --sidebar-foreground: 210 15% 85%;
+    --sidebar-primary: 210 50% 60%;
+    --sidebar-primary-foreground: 210 20% 8%;
+    --sidebar-accent: 210 20% 12%;
+    --sidebar-accent-foreground: 210 15% 85%;
+    --sidebar-border: 210 20% 18%;
+    --sidebar-ring: 210 50% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
