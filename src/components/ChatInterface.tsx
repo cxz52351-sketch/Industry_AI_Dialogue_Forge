@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Download, FileText, Settings } from "lucide-react";
+import { Download, Settings, FileDown, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatSidebar } from "./ChatSidebar";
@@ -7,6 +7,12 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { useToast } from "@/hooks/use-toast";
 import { api, parseStreamResponse, type Message as APIMessage } from "@/lib/api";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Message {
   id: string;
@@ -19,6 +25,11 @@ interface Message {
     type: string;
     url: string;
   }>;
+  generatedFile?: {
+    filename: string;
+    url: string;
+    mime_type: string;
+  };
 }
 
 interface Conversation {
@@ -34,7 +45,7 @@ export function ChatInterface() {
     {
       id: "1",
       title: "工业AI对话系统介绍",
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+      timestamp: new Date(Date.now() - 1000 * 60 * 30),
       preview: "欢迎使用工业级AI对话系统",
       messages: [
         {
@@ -51,7 +62,8 @@ export function ChatInterface() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState("deepseek-chat");
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(true);
+  const [outputFormat, setOutputFormat] = useState<"text" | "pdf" | "docx" | "markdown">("text");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -73,131 +85,6 @@ export function ChatInterface() {
   const generateConversationTitle = (content: string): string => {
     const firstLine = content.split('\n')[0];
     return firstLine.length > 30 ? firstLine.substring(0, 30) + "..." : firstLine;
-  };
-
-  const callDeepSeekAPI = async (messages: APIMessage[], files?: File[]): Promise<string> => {
-    try {
-      // 如果有文件，先上传文件
-      let fileContext = "";
-      if (files && files.length > 0) {
-        try {
-          const uploadPromises = files.map(file => api.uploadFile(file));
-          const uploadResults = await Promise.all(uploadPromises);
-          
-          fileContext = `\n\n用户上传了以下文件:\n${uploadResults.map(result => 
-            `• ${result.filename} (${(result.size / 1024 / 1024).toFixed(2)}MB)`
-          ).join('\n')}\n\n请分析这些文件的内容并回答用户的问题。`;
-        } catch (error) {
-          console.error('文件上传失败:', error);
-          fileContext = `\n\n用户尝试上传文件但上传失败，请直接回答用户的问题。`;
-        }
-      }
-
-      // 准备发送给API的消息
-      const apiMessages: APIMessage[] = [
-        {
-          role: 'system',
-          content: `你是一个专业的工业AI助手，专门为工业应用场景提供帮助。你擅长：
-          
-1. 技术问题解答和代码生成
-2. 文件内容分析和处理
-3. 工业流程优化建议
-4. 数据分析和可视化
-5. 专业文档编写
-
-请用中文回答，保持专业、准确、有帮助。${fileContext}`
-        },
-        ...messages
-      ];
-
-      // 调用DeepSeek API
-      const response = await api.chat({
-        messages: apiMessages,
-        model: selectedModel,
-        temperature: 0.7,
-        max_tokens: 4000,
-        stream: false
-      });
-
-      return response.choices[0]?.message?.content || "抱歉，我无法生成回复。";
-      
-    } catch (error) {
-      console.error('API调用失败:', error);
-      if (error instanceof Error) {
-        throw new Error(`API调用失败: ${error.message}`);
-      }
-      throw new Error('未知错误');
-    }
-  };
-
-  const callDeepSeekAPIStream = async (
-    messages: APIMessage[], 
-    files?: File[],
-    onChunk?: (content: string) => void
-  ): Promise<string> => {
-    try {
-      // 如果有文件，先上传文件
-      let fileContext = "";
-      if (files && files.length > 0) {
-        try {
-          const uploadPromises = files.map(file => api.uploadFile(file));
-          const uploadResults = await Promise.all(uploadPromises);
-          
-          fileContext = `\n\n用户上传了以下文件:\n${uploadResults.map(result => 
-            `• ${result.filename} (${(result.size / 1024 / 1024).toFixed(2)}MB)`
-          ).join('\n')}\n\n请分析这些文件的内容并回答用户的问题。`;
-        } catch (error) {
-          console.error('文件上传失败:', error);
-          fileContext = `\n\n用户尝试上传文件但上传失败，请直接回答用户的问题。`;
-        }
-      }
-
-      // 准备发送给API的消息
-      const apiMessages: APIMessage[] = [
-        {
-          role: 'system',
-          content: `你是一个专业的工业AI助手，专门为工业应用场景提供帮助。你擅长：
-          
-1. 技术问题解答和代码生成
-2. 文件内容分析和处理
-3. 工业流程优化建议
-4. 数据分析和可视化
-5. 专业文档编写
-
-请用中文回答，保持专业、准确、有帮助。${fileContext}`
-        },
-        ...messages
-      ];
-
-      // 调用DeepSeek API流式接口
-      const stream = await api.chatStream({
-        messages: apiMessages,
-        model: selectedModel,
-        temperature: 0.7,
-        max_tokens: 4000,
-        stream: true
-      });
-
-      let fullContent = "";
-      const parser = parseStreamResponse(stream);
-      
-      for await (const chunk of parser) {
-        if (chunk.choices && chunk.choices[0]?.delta?.content) {
-          const content = chunk.choices[0].delta.content;
-          fullContent += content;
-          onChunk?.(content);
-        }
-      }
-
-      return fullContent;
-      
-    } catch (error) {
-      console.error('API流式调用失败:', error);
-      if (error instanceof Error) {
-        throw new Error(`API调用失败: ${error.message}`);
-      }
-      throw new Error('未知错误');
-    }
   };
 
   const handleSendMessage = async (content: string, files?: File[]) => {
@@ -262,36 +149,75 @@ export function ChatInterface() {
           : conv
       ));
 
-      // 调用DeepSeek API
-      let aiResponse: string;
-      
       if (isStreaming) {
         // 流式响应
-        setIsStreaming(true);
-        aiResponse = await callDeepSeekAPIStream(
-          conversationMessages, // 包含所有消息
-          files,
-          (chunk) => {
-            // 实时更新AI消息内容
+        const stream = await api.chatStream({
+          messages: conversationMessages,
+          model: selectedModel,
+          temperature: 0.7,
+          max_tokens: 4000,
+          stream: true,
+          output_format: outputFormat
+        });
+
+        const parser = parseStreamResponse(stream);
+        
+        for await (const chunk of parser) {
+          if (chunk.choices && chunk.choices[0]?.delta?.content) {
+            const content = chunk.choices[0].delta.content;
+            
+            // 更新消息内容
             setConversations(prev => prev.map(conv => 
               conv.id === activeConversationId 
                 ? {
                     ...conv,
                     messages: conv.messages.map(msg => 
                       msg.id === aiMessageId 
-                        ? { ...msg, content: msg.content + chunk }
+                        ? { ...msg, content: msg.content + content }
                         : msg
                     )
                   }
                 : conv
             ));
+          } else if (chunk.type === "file") {
+            // 处理生成的文件
+            setConversations(prev => prev.map(conv => 
+              conv.id === activeConversationId 
+                ? {
+                    ...conv,
+                    messages: conv.messages.map(msg => 
+                      msg.id === aiMessageId 
+                        ? { 
+                            ...msg, 
+                            generatedFile: {
+                              filename: chunk.filename,
+                              url: chunk.url,
+                              mime_type: chunk.mime_type
+                            }
+                          }
+                        : msg
+                    )
+                  }
+                : conv
+            ));
+
+            toast({
+              title: "文件生成成功",
+              description: `已生成文件：${chunk.filename}`,
+            });
           }
-        );
-        setIsStreaming(false);
+        }
       } else {
         // 普通响应
-        aiResponse = await callDeepSeekAPI(conversationMessages, files);
-        
+        const response = await api.chat({
+          messages: conversationMessages,
+          model: selectedModel,
+          temperature: 0.7,
+          max_tokens: 4000,
+          stream: false,
+          output_format: outputFormat
+        });
+
         // 更新AI消息内容
         setConversations(prev => prev.map(conv => 
           conv.id === activeConversationId 
@@ -299,12 +225,23 @@ export function ChatInterface() {
                 ...conv,
                 messages: conv.messages.map(msg => 
                   msg.id === aiMessageId 
-                    ? { ...msg, content: aiResponse }
+                    ? { 
+                        ...msg, 
+                        content: response.choices[0]?.message?.content || "抱歉，我无法生成回复。",
+                        generatedFile: response.file
+                      }
                     : msg
                 )
               }
             : conv
         ));
+
+        if (response.file) {
+          toast({
+            title: "文件生成成功",
+            description: `已生成文件：${response.file.filename}`,
+          });
+        }
       }
 
     } catch (error) {
@@ -412,6 +349,10 @@ export function ChatInterface() {
     });
   };
 
+  const handleDownloadFile = (url: string) => {
+    api.downloadFile(url);
+  };
+
   return (
     <div className="flex h-screen bg-background">
       <ChatSidebar
@@ -437,6 +378,29 @@ export function ChatInterface() {
           </div>
           
           <div className="flex gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  {outputFormat === "text" ? "纯文本" : outputFormat.toUpperCase()}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setOutputFormat("text")}>
+                  纯文本
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setOutputFormat("pdf")}>
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setOutputFormat("docx")}>
+                  Word
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setOutputFormat("markdown")}>
+                  Markdown
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="outline"
               size="sm"
@@ -445,6 +409,7 @@ export function ChatInterface() {
               <Settings className="h-4 w-4 mr-2" />
               {selectedModel === "deepseek-chat" ? "DeepSeek Chat" : "DeepSeek Coder"}
             </Button>
+            
             <Button
               variant="outline"
               size="sm"
@@ -461,15 +426,29 @@ export function ChatInterface() {
         <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
           <div className="space-y-4 max-w-4xl mx-auto">
             {activeConversation?.messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                type={message.type}
-                content={message.content}
-                timestamp={message.timestamp}
-                isError={message.isError}
-                attachments={message.attachments}
-                onRetry={message.isError ? handleRetryMessage : undefined}
-              />
+              <div key={message.id} className="space-y-2">
+                <ChatMessage
+                  type={message.type}
+                  content={message.content}
+                  timestamp={message.timestamp}
+                  isError={message.isError}
+                  attachments={message.attachments}
+                  onRetry={message.isError ? handleRetryMessage : undefined}
+                />
+                {message.generatedFile && (
+                  <div className="flex items-center gap-2 ml-4">
+                    <FileText className="h-4 w-4" />
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="p-0 h-auto"
+                      onClick={() => handleDownloadFile(message.generatedFile!.url)}
+                    >
+                      下载生成的文件：{message.generatedFile.filename}
+                    </Button>
+                  </div>
+                )}
+              </div>
             ))}
             
             {isLoading && (
